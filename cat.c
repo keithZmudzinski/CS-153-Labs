@@ -34,10 +34,10 @@ main(int argc, char *argv[])
   for(i = 1; i < argc; i++){
     if((fd = open(argv[i], 0)) < 0){
       printf(1, "cat: cannot open %s\n", argv[i]);
-      exit(1);
+      exit(0);
     }
     cat(fd);
     close(fd);
   }
-  exit(0);
+  exit(1);
 }
