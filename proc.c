@@ -6,6 +6,7 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include <stdio.h>
 
 struct {
   struct spinlock lock;
@@ -225,13 +226,13 @@ fork(void)
 // An exited process remains in the zombie state
 // until its parent calls wait() to find out it exited.
 void
-exit(int exitStatus)// if error, exitStatus should be -1, 0 else
+exit(int status)// if error, status should be -1, 0 else
 {
   struct proc *curproc = myproc();
   struct proc *p;
   int fd;
 // NEW LINE ADDED FOR LAB 1
-  curproc->exitStatus = exitStatus;
+  curproc->status = status;
   if(curproc == initproc)
     panic("init exiting");
 
@@ -285,8 +286,14 @@ wait(int *status)
       if(p->parent != curproc)
         continue;
       havekids = 1;
+	
       if(p->state == ZOMBIE){
         // Found one.
+
+        //ADDED BY ME  
+	//test = argint(0, status);
+	*status = p->status;
+	
         pid = p->pid;
         kfree(p->kstack);
         p->kstack = 0;
@@ -297,8 +304,9 @@ wait(int *status)
         p->killed = 0;
         p->state = UNUSED;
 	if(status){//Added this statement
-		p->exitStatus = argint(0, exitStatus);
+		
 	}
+
 
         release(&ptable.lock);
         return pid;
@@ -307,9 +315,6 @@ wait(int *status)
 
     // No point waiting if we don't have any children.
     if(!havekids || curproc->killed){
-      if(status){//Added this statement
-	  argint(&(p->exitStatus), status);
-      }
       release(&ptable.lock);
       return -1;
     }
