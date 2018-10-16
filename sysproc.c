@@ -6,7 +6,6 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
-
 int
 sys_fork(void)
 {
@@ -27,8 +26,11 @@ sys_exit(void)
 int
 sys_wait(void)
 {
-  int status = 6969;
-  return wait(&status);
+  int* status;
+  if(argptr(0,(void*)&status,sizeof(int)) < 0){
+    return -1;
+  }
+  return wait(status);
 }
 
 int
