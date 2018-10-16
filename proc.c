@@ -224,7 +224,7 @@ fork(void)
 
 // Exit the current process.  Does not return.
 // An exited process remains in the zombie state
-// until its parent calls wait() to find out it exited.
+// until its parent calls wait(0) to find out it exited.
 void
 exit(int status)// if error, status should be -1, 0 else
 {
@@ -251,7 +251,7 @@ exit(int status)// if error, status should be -1, 0 else
 
   acquire(&ptable.lock);
 
-  // Parent might be sleeping in wait().
+  // Parent might be sleeping in wait(0).
   wakeup1(curproc->parent);
 
   // Pass abandoned children to init.
@@ -291,8 +291,9 @@ wait(int *status)
         // Found one.
 
         //ADDED BY ME  
-	//test = argint(0, status);
-	*status = p->status;
+        if(status){
+	    *status = p->status;
+	}
 	
         pid = p->pid;
         kfree(p->kstack);

@@ -27,7 +27,7 @@ sys_exit(void)
 int
 sys_wait(void)
 {
-  int status;
+  int status = 6969;
   return wait(&status);
 }
 
