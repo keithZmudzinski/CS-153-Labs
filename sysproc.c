@@ -24,6 +24,16 @@ sys_exit(void)
 }
 
 int
+sys_setPriority(void)
+{
+  int priority = 0;
+  if(argint(0, &priority) < 0){
+    return -1;
+  }
+  return setPriority(priority);
+}
+
+int
 sys_wait(void)
 {
   int* status;
