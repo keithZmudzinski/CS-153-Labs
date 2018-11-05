@@ -89,7 +89,7 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
-  p->priority = 20; //Sets all new process' priority to 1
+  p->priority = 20; //Sets all new process' priority to 20
   release(&ptable.lock);
 
   // Allocate kernel stack.
@@ -150,7 +150,6 @@ userinit(void)
   acquire(&ptable.lock);
 
   p->state = RUNNABLE;
-
   release(&ptable.lock);
 }
 
@@ -389,7 +388,15 @@ scheduler(void)
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
-  
+  struct proc *pToRun;
+  //initializes pToRun as first available process, only the first time scheduler called
+  acquire(&ptable.lock);
+  for(pToRun = ptable.proc; pToRun < &ptable.proc[NPROC]; pToRun++){
+    if(pToRun->state == RUNNABLE)
+      break;
+  }
+  release(&ptable.lock);
+
   for(;;){
     // Enable interrupts on this processor.
     sti();
@@ -397,26 +404,36 @@ scheduler(void)
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
+      if(p->state != RUNNABLE){
         continue;
+      }//Must be runnable for priority change
+      if(p->state == RUNNABLE){
+        if(p->priority > pToRun->priority){
+          if(p->priority > 0){p->priority -= 1;}//Wasn't run, ages priority
+          continue;
+        } 
+        else{
+  	  if(pToRun->priority > 0){pToRun->priority -= 1;}
+          pToRun = p;
+	}	
+      }
+    
+    // Switch to chosen process.  It is the process's job
+    // to release ptable.lock and then reacquire it
+    // before jumping back to us.
+    if(pToRun->priority < 63){pToRun->priority += 1;}
+    c->proc = pToRun;
+    switchuvm(pToRun);
+    pToRun->state = RUNNING;
+    swtch(&(c->scheduler), pToRun->context);
+    switchkvm();
 
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
-
-      swtch(&(c->scheduler), p->context);
-      switchkvm();
-
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      c->proc = 0;
+    // Process is done running for now.
+    // It should have changed its p->state before coming back.
+    c->proc = 0;
     }
-    release(&ptable.lock);
-
-  }
+    release(&ptable.lock); 
+  } 
 }
 
 // Enter scheduler.  Must hold only ptable.lock
