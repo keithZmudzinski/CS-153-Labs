@@ -89,7 +89,7 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
-
+  p->prio = 20;
   release(&ptable.lock);
 
   // Allocate kernel stack.
@@ -114,6 +114,14 @@ found:
   p->context->eip = (uint)forkret;
 
   return p;
+}
+
+int setpriority(int num)
+{
+  struct proc* p = myproc();
+  if (num >= 0 && num < 64)
+    p->prio = num;
+  return 0;
 }
 
 //PAGEBREAK: 32
@@ -384,31 +392,46 @@ scheduler(void)
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
-  
+  struct proc *max;
   for(;;){
     // Enable interrupts on this processor.
     sti();
-
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+    max = NULL;
+    int lowest = 64;
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
-
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
-
-      swtch(&(c->scheduler), p->context);
-      switchkvm();
-
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      c->proc = 0;
+      if((p->state == RUNNABLE) && (p->prio < lowest)){
+	if (max != NULL) {
+	  if(max->prio > 0) {
+	    max->prio -= 1;
+         }
+       }
+        lowest = p->prio;
+        max = p;
+      }
+      else {
+        if(p->prio > 0){
+	  p->prio -= 1;
+        }
+      }
     }
+     // Switch to chosen process.  It is the process's job
+     // to release ptable.lock and then reacquire it
+     // before jumping back to us.
+     if (max != NULL){
+	 if (max->prio < 63)
+	   max->prio += 1;
+       	 c->proc = max;
+         switchuvm(max);
+         max->state = RUNNING;
+         swtch(&(c->scheduler), max->context);
+         switchkvm();
+
+       // Process is done running for now.
+       // It should have changed its p->state before coming back.
+         c->proc = 0;
+     }
     release(&ptable.lock);
 
   }
@@ -591,3 +614,4 @@ procdump(void)
     cprintf("\n");
   }
 }
+int getpriority(void){return 0;}
