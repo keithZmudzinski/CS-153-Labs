@@ -158,7 +158,6 @@ userinit(void)
   acquire(&ptable.lock);
 
   p->state = RUNNABLE;
-
   release(&ptable.lock);
 }
 
@@ -378,6 +377,11 @@ waitpid(int pid, int *status, int options)
     sleep(curproc, &ptable.lock);  //DOC: wait-sleep
   }
 }
+int setPriority(int priority){
+  struct proc* p = myproc();
+  p->priority = priority;
+  return 0;
+} 
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
