@@ -45,8 +45,18 @@ trap(struct trapframe *tf)
       exit(-1);
     return;
   }
+  
 
   switch(tf->trapno){
+  case T_PGFLT:
+    if(PGROUNDUP(rcr2()) == KERNBASE - (myproc()->stackSize * PGSIZE)){
+      allocuvm(myproc()->pgdir,PGROUNDDOWN(rcr2()),PGROUNDDOWN(rcr2()) + PGSIZE);
+      myproc()->stackSize += 1;
+      break;
+    }
+    else{
+      goto KILLPROCESS;
+    }
   case T_IRQ0 + IRQ_TIMER:
     if(cpuid() == 0){
       acquire(&tickslock);
@@ -79,6 +89,7 @@ trap(struct trapframe *tf)
     break;
 
   //PAGEBREAK: 13
+  KILLPROCESS:
   default:
     if(myproc() == 0 || (tf->cs&3) == 0){
       // In kernel, it must be our mistake.
